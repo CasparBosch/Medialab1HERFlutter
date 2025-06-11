@@ -11,6 +11,7 @@ class CameraWidget extends StatefulWidget {
   State<CameraWidget> createState() => _CameraWidgetState();
 }
 
+// Stateful widget die camerafunctionaliteit toont
 class _CameraWidgetState extends State<CameraWidget> {
   late List<CameraDescription> _cameras;
   late CameraController _controller;
@@ -23,6 +24,7 @@ class _CameraWidgetState extends State<CameraWidget> {
     _initializeCamera();
   }
 
+  // Laadt beschikbare camera’s en initialiseert de controller
   Future<void> _initializeCamera() async {
     _cameras = await availableCameras();
     _controller = CameraController(
@@ -35,6 +37,7 @@ class _CameraWidgetState extends State<CameraWidget> {
     }
   }
 
+  // Wisselt tussen voor- en achtercamera
   void _switchCamera() async {
     setState(() => _isInitialized = false);
     _isRearCameraSelected = !_isRearCameraSelected;
@@ -44,11 +47,13 @@ class _CameraWidgetState extends State<CameraWidget> {
 
   @override
   void dispose() {
+    // Ruimt de cameracontroller op bij het sluiten van de widget
     _controller.dispose();
     super.dispose();
   }
 
   @override
+  // Bouwt de gebruikersinterface van de cameraweergave
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
@@ -62,10 +67,12 @@ class _CameraWidgetState extends State<CameraWidget> {
         centerTitle: true,
         elevation: 2,
       ),
+      // Toont camerabeeld of laadindicator
       body: _isInitialized
           ? Stack(
         children: [
           CameraPreview(_controller),
+          // Bovenste knoppenrij (sluiten, flits, timer)
           Positioned(
             top: 40,
             left: 16,
@@ -83,6 +90,7 @@ class _CameraWidgetState extends State<CameraWidget> {
               ],
             ),
           ),
+          // Onderste knoppenrij (galerij, foto maken, camera wisselen)
           Positioned(
             bottom: 40,
             left: 0,
@@ -102,6 +110,7 @@ class _CameraWidgetState extends State<CameraWidget> {
     );
   }
 
+  // Maakt een ronde knop met een icoon en actie
   Widget _iconButton(IconData icon, VoidCallback onPressed) {
     return Container(
       decoration: BoxDecoration(
@@ -115,6 +124,7 @@ class _CameraWidgetState extends State<CameraWidget> {
     );
   }
 
+  // Maakt en toont de opnameknop voor foto's
   Widget _captureButton() {
     return GestureDetector(
       onTap: () async {
