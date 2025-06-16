@@ -65,7 +65,7 @@ class _GraphWidgetState extends State<GraphWidget> {
               child: SizedBox(
                 width: 370,
                 height: 400,
-                // Teken linechart
+                // Tekent linechart
                 child: LineChart(
                   LineChartData(
                     //verberg grid

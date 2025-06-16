@@ -24,7 +24,7 @@ class _CameraWidgetState extends State<CameraWidget> {
     _initializeCamera();
   }
 
-  // Laadt beschikbare camera’s en initialiseert de controller
+  // Laadt beschikbare camera’s en initialised de controller
   Future<void> _initializeCamera() async {
     _cameras = await availableCameras();
     _controller = CameraController(
@@ -37,7 +37,7 @@ class _CameraWidgetState extends State<CameraWidget> {
     }
   }
 
-  // Wisselt tussen voor- en achtercamera
+  // Wisselt tussen voor-/achtercamera
   void _switchCamera() async {
     setState(() => _isInitialized = false);
     _isRearCameraSelected = !_isRearCameraSelected;
