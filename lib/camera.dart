@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
+import 'dart:typed_data';
+import 'package:tflite_flutter/tflite_flutter.dart';
+import 'package:tflite_flutter_helper/tflite_flutter_helper.dart';
+import 'package:image/image.dart' as img;
 
 class CameraWidget extends StatefulWidget {
   const CameraWidget({super.key});
@@ -18,22 +22,45 @@ class _CameraWidgetState extends State<CameraWidget> {
   bool _isInitialized = false;
   bool _isRearCameraSelected = true;
 
+  // Add pose estimator fields
+  Interpreter? _interpreter;
+  bool _isModelLoaded = false;
+  List<dynamic>? _poseResults;
+
   @override
   void initState() {
     super.initState();
     _initializeCamera();
+    _loadModel();
   }
 
-  // Laadt beschikbare camera’s en initialised de controller
+  // Load TFLite pose model
+  Future<void> _loadModel() async {
+    try {
+      _interpreter = await Interpreter.fromAsset('models/posenet.tflite');
+      setState(() {
+        _isModelLoaded = true;
+      });
+    } catch (e) {
+      debugPrint('Failed to load model: $e');
+    }
+  }
+
+  // Laad beschikbare camera’s en initialised de controller
   Future<void> _initializeCamera() async {
     _cameras = await availableCameras();
     _controller = CameraController(
       _isRearCameraSelected ? _cameras.first : _cameras.last,
       ResolutionPreset.high,
+      imageFormatGroup: ImageFormatGroup.bgra8888, // Needed for image processing
     );
     await _controller.initialize();
     if (mounted) {
       setState(() => _isInitialized = true);
+    }
+    // Start stream for pose detection if model is loaded
+    if (_isModelLoaded) {
+      _controller.startImageStream(_processCameraImage);
     }
   }
 
@@ -45,10 +72,43 @@ class _CameraWidgetState extends State<CameraWidget> {
     await _initializeCamera();
   }
 
+  // Process camera image and run pose estimation
+  void _processCameraImage(CameraImage image) async {
+    if (!_isModelLoaded || _interpreter == null) return;
+
+    // Convert CameraImage to TensorImage (simplified, only works for BGRA)
+    try {
+      final img.Image convertedImage = img.Image.fromBytes(
+        image.width,
+        image.height,
+        image.planes[0].bytes,
+        format: img.Format.bgra,
+      );
+      final tensorImage = TensorImage.fromImage(convertedImage);
+
+      // Prepare output buffer
+      var outputShapes = _interpreter!.getOutputTensors().map((t) => t.shape).toList();
+      var outputTypes = _interpreter!.getOutputTensors().map((t) => t.type).toList();
+      var outputs = <int, Object>{};
+      for (int i = 0; i < outputShapes.length; i++) {
+        outputs[i] = TensorBuffer.createFixedSize(outputShapes[i], outputTypes[i]);
+      }
+
+      _interpreter!.runForMultipleInputs([tensorImage.buffer], outputs);
+
+      setState(() {
+        _poseResults = outputs.values.toList();
+      });
+    } catch (e) {
+      debugPrint('Pose estimation error: $e');
+    }
+  }
+
   @override
   void dispose() {
     // Ruimt de cameracontroller op bij het sluiten van de widget
     _controller.dispose();
+    _interpreter?.close();
     super.dispose();
   }
 
@@ -72,6 +132,19 @@ class _CameraWidgetState extends State<CameraWidget> {
           ? Stack(
         children: [
           CameraPreview(_controller),
+          // Overlay pose results (for demonstration, just show as text)
+          if (_poseResults != null)
+            Positioned(
+              top: 100,
+              left: 16,
+              child: Container(
+                color: Colors.black54,
+                child: Text(
+                  'Pose detected!',
+                  style: TextStyle(color: Colors.green, fontSize: 18),
+                ),
+              ),
+            ),
           // Bovenste knoppenrij (sluiten, flits, timer)
           Positioned(
             top: 40,
